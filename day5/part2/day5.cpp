@@ -5,9 +5,9 @@
 #include <cctype>
 
 struct map_entry {
-    unsigned int destination;
-    unsigned int source;
-    unsigned int range;
+    long long destination;
+    long long source;
+    long long range;
 
     // Define comparison operator for sorting based on 'source'
     bool operator<(const map_entry& other) const {
@@ -16,13 +16,13 @@ struct map_entry {
 };
 
 struct entry {
-    unsigned int first;
-    unsigned int range;
+    long long first;
+    long long range;
     bool processed;
 };
 
-static const unsigned int MAP_MAX = 7;
-static unsigned int current_map = 0;
+static const long long MAP_MAX = 7;
+static long long current_map = 0;
 static std::vector<unsigned int> seeds;
 static std::set<map_entry> maps[MAP_MAX];
 static const std::string MAPS_NAME[MAP_MAX] =
@@ -49,9 +49,9 @@ void load_maps(std::string &line)
     found = line.find("seeds");
     if (found != std::string::npos)
     {
-        unsigned int num = 0;
+        long long num = 0;
         bool new_num = false;
-        for (unsigned int i = 0; i < line.size(); i++)
+        for (long unsigned int i = 0; i < line.size(); i++)
         {
             char ch = line[i];
             if (!isdigit(ch))
@@ -77,7 +77,7 @@ void load_maps(std::string &line)
         return;
     }
     // check for map changing
-    for (unsigned int i = 0; i < MAP_MAX; i++)
+    for (long long i = 0; i < MAP_MAX; i++)
     {
         found = line.find(MAPS_NAME[i]);
         if (found == std::string::npos)
@@ -89,7 +89,7 @@ void load_maps(std::string &line)
         }
     }
 
-    for (unsigned int i = 0; i < line.size(); i++)
+    for (long unsigned int i = 0; i < line.size(); i++)
     {
         char ch = line[i];
         if (!isdigit(ch))
@@ -129,12 +129,12 @@ void load_maps(std::string &line)
         maps[current_map].insert(map);
 }
 
-unsigned int seed_lookup(unsigned int seed_num)
+long long seed_lookup(long long seed_num)
 {
-    unsigned int input = seed_num;
-    unsigned int out = 0;
+    long long input = seed_num;
+    long long out = 0;
     bool found = false;
-    for (unsigned int i = 0; i < MAP_MAX; i++)
+    for (long long i = 0; i < MAP_MAX; i++)
     {
         for (const auto &en : maps[i])
         {
@@ -149,7 +149,7 @@ unsigned int seed_lookup(unsigned int seed_num)
                 continue;
             }
             // Found it. It is in the range.
-            unsigned int diff = input - en.source;
+            long long diff = input - en.source;
             out = en.destination + diff;
             found = true;
             break;
@@ -195,8 +195,12 @@ bool range_operation(entry &in, const map_entry &me, std::vector<entry> &out, st
     {
         // ranges overlap
         // case 1: input range is inside source range
-        unsigned int diff = in.first - me.source;
+        long long diff = in.first - me.source;
         out.push_back({me.destination + diff, in.range, false});
+        std::cout << "case 1: " << std::endl;
+        std::cout << "i: " << in.first << " r: " << in.range << std::endl;
+        std::cout << "s: " << me.source << " r: " << me.range << " d:" << me.destination << std::endl;
+        std::cout << "o: " << out.back().first << " r: " << out.back().range << std::endl;
         return true;
     }
     else if ((in.first < me.source) && (in.first + in.range <= me.source + me.range))
@@ -204,10 +208,15 @@ bool range_operation(entry &in, const map_entry &me, std::vector<entry> &out, st
         // case 2: input range overlaps source range in the right side.
         // In another words, at least the last item of the input range
         // is inside the output range.
-       rest.push_back({in.first, me.source - in.first, false}); 
-       unsigned int diff = in.first + in.range - me.source;
-       out.push_back({me.destination, diff, false});
-       return true;
+        rest.push_back({in.first, me.source - in.first, false}); 
+        long long diff = in.first + in.range - me.source;
+        out.push_back({me.destination, diff, false});
+        std::cout << "case 2: " << std::endl;
+        std::cout << "i: " << in.first << " r: " << in.range << std::endl;
+        std::cout << "s: " << me.source << " r: " << me.range << " d:" << me.destination << std::endl;
+        std::cout << "o: " << out.back().first << " r: " << out.back().range << std::endl;
+        std::cout << "re: " << rest.back().first << " r: " << rest.back().range << std::endl;
+        return true;
     }
     else if ((in.first >= me.source) && (in.first + in.range > me.source + me.range))
     {
@@ -215,15 +224,26 @@ bool range_operation(entry &in, const map_entry &me, std::vector<entry> &out, st
         // In another words, at least the first item of the input range
         // is inside the output range.
         rest.push_back({me.source + me.range, (in.first + in.range) - (me.source + me.range), false});
-        unsigned int diff = in.first - me.source;
+        long long diff = in.first - me.source;
         out.push_back({me.destination + diff, me.source + me.range - in.first, false});
+        std::cout << "case 3: " << std::endl;
+        std::cout << "i: " << in.first << " r: " << in.range << std::endl;
+        std::cout << "s: " << me.source << " r: " << me.range << " d:" << me.destination << std::endl;
+        std::cout << "o: " << out.back().first << " r: " << out.back().range << std::endl;
+        std::cout << "re: " << rest.back().first << " r: " << rest.back().range << std::endl;
         return true;
     }
     else if ((in.first < me.source) && ((in.first + in.range) > (me.source + me.range)))
     {
+        std::cout << "case 4: " << std::endl;
         rest.push_back({in.first, me.source - in.first, false});
+        std::cout << "re: " << rest.back().first << " r: " << rest.back().range << std::endl;
         rest.push_back({me.source + me.range, (in.first + in.range) - (me.source + me.range), false});
+        std::cout << "re: " << rest.back().first << " r: " << rest.back().range << std::endl;
         out.push_back({me.destination, me.range, false});
+        std::cout << "i: " << in.first << " r: " << in.range << std::endl;
+        std::cout << "s: " << me.source << " r: " << me.range << " d:" << me.destination << std::endl;
+        std::cout << "o: " << out.back().first << " r: " << out.back().range << std::endl;
         return true;
     }
 
@@ -235,14 +255,14 @@ bool range_operation(entry &in, const map_entry &me, std::vector<entry> &out, st
     return false;
 }
 
-unsigned int seed_range_lookup(unsigned int seed_num, unsigned int range)
+long long seed_range_lookup(long long seed_num, long long range)
 {
     std::vector<entry> input;
     std::vector<entry> out;
     std::vector<entry> rest;
 
     input.push_back({seed_num, range, false});
-    for (unsigned int i = 0; i < MAP_MAX; i++)
+    for (long long i = 0; i < MAP_MAX; i++)
     {
         for (const auto &en : maps[i])
         {
@@ -260,6 +280,15 @@ unsigned int seed_range_lookup(unsigned int seed_num, unsigned int range)
                 in.processed = true;
                 range_operation(in, en, out, rest);
             }
+
+            // Get not processed items
+            std::vector<entry> input_not_processed;
+            for (auto &in : input)
+            {
+                if (!in.processed)
+                    input_not_processed.push_back(in);
+            }
+            input = input_not_processed;
 
             if (rest.size())
             {
@@ -285,10 +314,12 @@ unsigned int seed_range_lookup(unsigned int seed_num, unsigned int range)
         out = {};
     }
 
-    unsigned int low_val = 0;
+    long long low_val = 0;
+    long long sum_range = 0;
     bool val_set = false;
     for (const auto &in: input)
     {
+        sum_range += in.range;
         if (!val_set)
         {
             low_val = in.first;
@@ -299,6 +330,9 @@ unsigned int seed_range_lookup(unsigned int seed_num, unsigned int range)
     }
 
     std::cout << "low_val: " << low_val << std::endl;
+    std::cout << "range: " << sum_range << std::endl;
+    if (range != sum_range)
+        std::cout << "ranges differs!" << std::endl;
 
     return low_val;
 }
@@ -321,7 +355,7 @@ int main(const int argc, const char * argv[])
     }
 
     std::string line;
-    unsigned int lowest_location = 0;
+    long long lowest_location = 0;
     bool initialized = false;
     while (std::getline(new_file, line))
     {
@@ -329,13 +363,13 @@ int main(const int argc, const char * argv[])
     }
 
     std::cout << "seeds & range: ";
-    for (unsigned int i = 0; i < seeds.size() / 2; i++)
+    for (long unsigned int i = 0; i < seeds.size() / 2; i++)
     {
         std::cout << "s: " << seeds[2 * i] << " r: " << seeds[2 * i + 1] << " ";
     }
     std::cout << std::endl;
     
-    for (unsigned int i = 0; i < MAP_MAX; i++)
+    for (long long i = 0; i < MAP_MAX; i++)
     {
         std::cout << "map " << MAPS_NAME[i] << std::endl;
         for (const auto &en : maps[i])
@@ -346,34 +380,34 @@ int main(const int argc, const char * argv[])
         }
     }
 
-    // for (unsigned int i = 0; i < seeds.size() / 2; i++)
-    // {
-    //     unsigned int location = seed_range_lookup(seeds[2 * i], seeds[2 * i + 1]);
-    //     if (!initialized)
-    //     {
-    //         initialized = true;
-    //         lowest_location = location;
-    //     }
-    //     else if (location < lowest_location)
-    //         lowest_location = location;
-    // }
+    for (long unsigned int i = 0; i < seeds.size() / 2; i++)
+    {
+        long long location = seed_range_lookup(seeds[2 * i], seeds[2 * i + 1]);
+        if (!initialized)
+        {
+            initialized = true;
+            lowest_location = location;
+        }
+        else if (location < lowest_location)
+            lowest_location = location;
+    }
 
     // Brute force strategy
-    for (unsigned int i = 0; i < seeds.size() / 2; i++)
-    {
-        for (unsigned int j = 0; j < seeds[2 * i + 1]; j++)
-        {
-            // unsigned int location = seed_range_lookup(seeds[2 * i], seeds[2 * i + 1]);
-            unsigned int location = seed_lookup(seeds[2 * i] + j);
-            if (!initialized)
-            {
-                initialized = true;
-                lowest_location = location;
-            }
-            else if (location < lowest_location)
-                lowest_location = location;
-        }
-    }
+    // for (long long i = 0; i < seeds.size() / 2; i++)
+    // {
+    //     for (long long j = 0; j < seeds[2 * i + 1]; j++)
+    //     {
+    //         // long long location = seed_range_lookup(seeds[2 * i], seeds[2 * i + 1]);
+    //         long long location = seed_lookup(seeds[2 * i] + j);
+    //         if (!initialized)
+    //         {
+    //             initialized = true;
+    //             lowest_location = location;
+    //         }
+    //         else if (location < lowest_location)
+    //             lowest_location = location;
+    //     }
+    // }
 
     std::cout << "location = " << lowest_location << std::endl;
 
