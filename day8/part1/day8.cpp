@@ -11,12 +11,15 @@ struct node {
 };
 
 static std::unordered_map<std::string, node> s_network_map;
+static bool s_first_node = false;
+static std::string s_first_node_name = "AAA";
 
 static void get_node(std::string &line)
 {
     enum states {value, left, right};
     states s = value;
     node n;
+
     for (const auto c : line)
     {
         if (isalpha(c)) {
@@ -34,7 +37,55 @@ static void get_node(std::string &line)
                 s = right;
         }
     }
+
+    if (s_first_node) {
+        s_first_node = false;
+        s_first_node_name = n.value;
+    }
+
     s_network_map[n.value] = n;
+}
+
+void log_map(void)
+{
+    for (auto iter = s_network_map.begin(); iter != s_network_map.end(); ++iter)
+    {
+        const auto node_name = iter->first;
+        const auto n = iter->second;
+        std::cout << node_name << ": " << n.left << "," << n.right << std::endl;
+    }
+}
+
+long long iterate_over_map(std::string input)
+{
+    bool exit = false;
+    std::string &current = s_first_node_name;
+    long long steps = 0;
+
+    while (!exit) {
+        for (auto &c : input) {
+            node &n = s_network_map[current];
+
+            if (c == 'L') {
+                current = n.left;
+                steps++;
+            }
+            else if (c == 'R') {
+                current = n.right;
+                steps++;
+            }
+
+            if (current.compare("ZZZ") == 0) {
+                exit = true;
+                break;
+            }
+            
+        }
+
+        std::cout << "I'm out of instruction. Stopped at: " << current << std::endl;
+    }
+
+    return steps;
 }
 
 int main(const int argc, const char * argv[])
@@ -65,6 +116,9 @@ int main(const int argc, const char * argv[])
     {
         get_node(line);
     }
+    log_map();
+    long long steps = iterate_over_map(input);
+    std::cout << "Number steps = " << steps << std::endl;
     return 0;
 }
 
