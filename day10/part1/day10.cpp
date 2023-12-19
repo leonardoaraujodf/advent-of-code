@@ -26,7 +26,7 @@ public:
     bool add_edge(int x1, int y1, int x2, int y2);
     bool get_vertex(unsigned int x, unsigned int y, unsigned int &v_num);
     // Prints BFS traversal from a given source s
-    void bfs(int s);
+    unsigned int bfs(unsigned int s);
 };
 
 Graph::Graph()
@@ -84,7 +84,7 @@ bool Graph::get_vertex(unsigned int x, unsigned int y, unsigned int &v_num)
     return true;
 }
 
-void Graph::bfs(int s)
+unsigned int Graph::bfs(unsigned int s)
 {
     // Mark all vertices as not visited
     std::vector<bool> visited;
@@ -92,34 +92,47 @@ void Graph::bfs(int s)
 
     // Create a queue for BFS
     std::list<unsigned int> queue;
+    unsigned int level = 0;
 
     // Mark the current node as visited and enqueue it
     visited[s] = true;
     queue.push_back(s);
 
     while(!queue.empty()) {
-        // Dequeue a vertex from queue and print it
-        s = queue.front();
-        std::cout << s << " ";
-        queue.pop_front();
-
-        // Get all adjacent vertices of the dequeued
-        // vertex s.
-        // If an adjacent has not been visited,
-        // then mark it visited and enqueue it
-        for (auto adjacent : m_adj[s]) {
-            if (!visited[adjacent]) {
-                visited[adjacent] = true;
-                queue.push_back(adjacent);
-            }
+        unsigned int sz = queue.size();
+        if (sz != 2) {
+            std::cout << "Here!" << std::endl;
         }
+
+        while (sz--)
+        {
+            // Dequeue a vertex from queue and print it
+            s = queue.front();
+            std::cout << "Vertex " << s << ":" << std::endl;
+            queue.pop_front();
+            std::cout << "Adj ";
+            for (auto adjacent : m_adj[s]) {
+                std::cout << adjacent << " ";
+                if (!visited[adjacent]) {
+                    visited[adjacent] = true;
+                    queue.push_back(adjacent);
+                }
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "Level: " << level << std::endl << std::endl;
+
+        if (!queue.empty())
+            level++;
     }
+
+    return level;
 }
 
 static Graph s_graph;
 static unsigned int s_root_vertex = 0;
 
-void get_vertexes(std::string &line, std::string &prev, unsigned int y)
+void get_vertexes(std::string &line, std::string &prev, unsigned int y, bool last_line)
 {
     unsigned int x = 0;
     for (unsigned int i = 0; i < line.size(); ++i, ++x)
@@ -129,13 +142,13 @@ void get_vertexes(std::string &line, std::string &prev, unsigned int y)
             case '|':
             {
                 // No way to have a vertical pipe in the first line
-                if (y == 0)
+                if (y == 0 || last_line)
                     continue;
 
                 char p = prev[x];
                 // If previous pipes were from those types there
                 // no way to connect
-                if ('-' == p || 'L' == p || 'J' == p || '.' == p)
+                if ('|' != p && '7' != p && 'F' != p && 'S' != p)
                     continue;
                 
                 // Check if vertex exists for previous value
@@ -157,7 +170,11 @@ void get_vertexes(std::string &line, std::string &prev, unsigned int y)
                     continue;
 
                 char p = line[x - 1];
-                if (p != 'L' && p != 'F' && p != 'S')
+                if (p != '-' && p != 'L' && p != 'F' && p != 'S')
+                    continue;
+
+                char n = line[x + 1];
+                if (n != '-' && n != 'J' && n != '7' && n != 'S')
                     continue;
 
                 // Check if vertex exists for previous value
@@ -182,6 +199,10 @@ void get_vertexes(std::string &line, std::string &prev, unsigned int y)
                 if (p != '|' && p != '7' && p != 'F' && p != 'S')
                     continue;
 
+                char n = line[x + 1];
+                if (n != '-' && n != 'J' && n != '7' && n != 'S')
+                    continue;
+
                 // Check if vertex exists for previous value
                 unsigned int w, v;
                 if (!s_graph.get_vertex(x, y - 1, w))
@@ -201,26 +222,33 @@ void get_vertexes(std::string &line, std::string &prev, unsigned int y)
                 if (y == 0 || x == 0)
                     continue;
 
-                char p = line[x - 1];
-                if (p != '-' && p != 'L' && p != 'S')
+                char p1 = line[x - 1];
+                char p2 = prev[x];
+                if (p1 != '-' && p1 != 'L' && p1 != 'F' && p1 != 'L' && p1 != 'S')
                     continue;
-                //
+                if (p2 != '|' && p2 != '7' && p2 != 'F' && p2 != 'S')
+                    continue;
+
                 // Check if vertex exists for previous value
-                unsigned int w, v;
-                if (!s_graph.get_vertex(x - 1, y, w))
+                unsigned int w1, w2, v;
+                if (!s_graph.get_vertex(x - 1, y, w1))
+                    continue;
+                if (!s_graph.get_vertex(x, y - 1, w2))
                     continue;
 
                 // Add new vertex
                 v = s_graph.add_vertex(x, y);
-                s_graph.add_edge(v, w);
-                s_graph.add_edge(w, v);
+                s_graph.add_edge(v, w1);
+                s_graph.add_edge(w1, v);
+                s_graph.add_edge(v, w2);
+                s_graph.add_edge(w2, v);
             }
             break;
 
             case '7':
             {
                 // Cannot have a 90-degree S/W bend on first column
-                if (x == 0)
+                if (x == 0 || last_line)
                     continue;
 
                 char p = line[x - 1];
@@ -240,8 +268,15 @@ void get_vertexes(std::string &line, std::string &prev, unsigned int y)
 
             case 'F':
             {
+                if (last_line)
+                    continue;
+
                 // Cannot have a 90-degreen S/E bend on last column
                 if (x == (line.size() - 1))
+                    continue;
+
+                char n = line[x + 1];
+                if (n != '-' && n != 'J' && n != '7' && n != 'S')
                     continue;
 
                 // We do not care what comes before an F. Just add it.
@@ -254,6 +289,28 @@ void get_vertexes(std::string &line, std::string &prev, unsigned int y)
                 
                 // This may come at any position. Just add it.
                 s_root_vertex = s_graph.add_vertex(x, y);
+                if (x == 0)
+                    continue;
+
+                char c = line[x - 1];
+                if (c == '-' || c == 'L' || c == 'F')
+                {
+                    unsigned int w;
+                    if (!s_graph.get_vertex(x - 1, y, w))
+                        continue;
+                    s_graph.add_edge(s_root_vertex, w);
+                    s_graph.add_edge(w, s_root_vertex);
+                }
+
+                char p = prev[x];
+                if (p == '|' || p == 'J' || p == '7' || p == 'F')
+                {
+                    unsigned int w;
+                    if (!s_graph.get_vertex(x, y - 1, w))
+                        continue;
+                    s_graph.add_edge(s_root_vertex, w);
+                    s_graph.add_edge(w, s_root_vertex);
+                }
             }
             break;
 
@@ -267,6 +324,7 @@ int main(const int argc, const char * argv[])
 {
     std::fstream new_file; 
     std::string line;
+    std::string current_line;
     std::string previous_line;
     if (argc != 2)
     {
@@ -283,11 +341,21 @@ int main(const int argc, const char * argv[])
     }
 
     unsigned int line_number = 0;
-    while (std::getline(new_file, line))
+    bool last_line = false;
+    while (!last_line)
     {
-        get_vertexes(line, previous_line, line_number);
-        previous_line = line;
-        line_number++;
+        std::getline(new_file, line);
+        if (line.size() == 0)
+            last_line = true;
+        if (current_line.size() > 0)
+        {
+            get_vertexes(current_line, previous_line, line_number, last_line);
+            line_number++;
+        }
+        previous_line = current_line;
+        current_line = line;
     }
+
+    std::cout << "Highest level: " << s_graph.bfs(s_root_vertex) << std::endl;
     return 0;
 }
