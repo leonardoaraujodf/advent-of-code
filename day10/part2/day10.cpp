@@ -400,16 +400,51 @@ unsigned int get_inside_tiles(std::string &line, std::string &prev, std::string 
 
                 case 'S':
                 {
+                    bool change_state = false;
                     char p1 = prev[x];
                     char n1 = next[x];
-                    if (last_bend == 'J' || last_bend == '7' || last_bend == 0 ||
-                        (p1 == '|' && n1 == '|')) {
+                    char p2 = 0, n2 = 0;
+                    if (x > 0)
+                        p2 = line[x - 1];
+                    if (x < line.size() - 1)
+                        n2 = line[x + 1];
+
+                    if (p1 == '|' && n1 == '|') {
+                        // It is a |
+                        change_state = true;
+                    }
+                    else if ((n2 == '-' || n2 == '7') &&
+                        (n1 == '|' || n1 == 'L' || n1 == 'J')) {
+                        last_bend = 'F';
+                        change_state = true;
+                    }
+                    else if ((p2 == '-' || p2 == 'F') &&
+                             (n1 == '|' || n1 == 'J' || n1 == 'L')) {
+                        if (last_bend == 'F') {
+                            change_state = true;
+                        }
+                        last_bend = '7';
+                    }
+                    else if ((p2 == '-' || p2 == 'L') &&
+                             (p1 == '|' || p1 == '7' || p1 == 'F'))
+                    {
+                        if (last_bend == 'L') {
+                            change_state = true;
+                        }
+                        last_bend = 'J';
+                    }
+                    else if ((p1 == '|' || p1 == 'F' || p1 == '7') &&
+                             (n2 == '-' || n2 == 'J')) {
+                        last_bend = 'L';
+                        change_state = true;
+                    }
+
+                    if (change_state) {
                         if (state == outside)
                             state = inside;
                         else
                             state = outside;
                     }
-                    last_bend = c;
                 }
                 break;
 
