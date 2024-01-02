@@ -6,15 +6,84 @@
 #include <cctype>
 
 class Record {
-private:
+public:
     std::string m_line;
     std::vector<unsigned int> m_ranges;
     std::vector<unsigned int> m_qlocations;
-public:
-    Record(std::string line, std::vector<unsigned int> ranges) : m_line(line), m_ranges(ranges) {}
+    Record(std::string line, std::vector<unsigned int> &ranges, std::vector<unsigned int> qlocations) : m_line(line), m_ranges(ranges), m_qlocations(qlocations) {}
 };
 
 static std::vector<Record> s_records;
+
+bool is_an_arrangment(const std::string &row, const std::vector<unsigned int> &ran)
+{
+    
+    unsigned int total_damaged = 0;
+    unsigned int total = 0;
+    std::size_t found = 0;
+    for (const auto &c : row)
+    {
+        if (c == '#')
+            ++total_damaged;
+    }
+
+    for (const auto &r : ran)
+        total += r;
+
+    if (total_damaged != total)
+        return false;
+
+    for (const auto &r : ran)
+    {
+       std::string damaged = "";
+       for (unsigned int i = 0; i < r; ++i)
+           damaged += "#";
+
+       found = row.find(damaged, found);
+       if (found == std::string::npos) {
+           return false;
+       } else if (found == 0) {
+           if (row[found + damaged.size()] != '.')
+               return false;
+       } else {
+           if (row[found - 1] != '.')
+               return false;
+           else if ((found + damaged.size() < row.size()) && row[found + damaged.size()] != '.')
+               return false;
+       }
+       found += damaged.size();
+    }
+
+   return true;
+}
+
+long long get_num_arrangments(const Record &rec)
+{
+    long long comb = 1;
+    long long count = 0;
+
+    for (unsigned int i = 0; i < rec.m_qlocations.size(); ++i)
+        comb *= 2;
+
+    for (long long i = 0; i < comb; ++i)
+    {
+        std::string temp = rec.m_line;
+        long long val = i;
+        for (const auto q : rec.m_qlocations)
+        {
+            if (val & 0x01)
+                temp[q] = '#';
+            else
+                temp[q] = '.';
+            val >>= 1;
+        }
+
+        if (is_an_arrangment(temp, rec.m_ranges))
+            ++count;
+    }
+
+    return count;
+}
 
 void get_record(std::string &line)
 {
@@ -48,12 +117,7 @@ void get_record(std::string &line)
     }
     ranges.push_back(num);
 
-    std::cout << "Row: " << srow << std::endl;
-    for (const auto &x : ranges)
-        std::cout << x << " ";
-    std::cout << std::endl;
-
-    Record r(srow, ranges);
+    Record r(srow, ranges, q_locations);
     s_records.push_back(r);
 }
 
@@ -79,6 +143,16 @@ int main(const int argc, const char * argv[])
     {
         get_record(line);
     }
+
+    long long count = 0;
+    for (const auto &r : s_records)
+    {
+        std::cout << r.m_line << std::endl;
+        long long c = get_num_arrangments(r);
+        std::cout << "t = " << c << std::endl;
+        count += c;
+    }
+    std::cout << "Total = " << count << std::endl;
     return 0;
 }
 
